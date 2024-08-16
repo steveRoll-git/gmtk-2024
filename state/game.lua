@@ -19,11 +19,18 @@ function game:enter()
   -- By how much each ring should be scaled to appear inside of the ring above it.
   self.ringScaleFactor = (self.ringRadius - self.ringHeight) / self.ringRadius
 
-  self.tilePolygon = {}
-  self.tilePolygon[1], self.tilePolygon[2] = polarToXY(0, self.ringRadius)
-  self.tilePolygon[3], self.tilePolygon[4] = polarToXY(0, self.ringRadius - self.ringHeight)
-  self.tilePolygon[5], self.tilePolygon[6] = polarToXY(self.segmentAngle, self.ringRadius - self.ringHeight)
-  self.tilePolygon[7], self.tilePolygon[8] = polarToXY(self.segmentAngle, self.ringRadius)
+  do
+    self.tilePolygon = {}
+    local tileSegments = 2
+    local totalElements = (tileSegments + 1) * 4
+    for i = 0, tileSegments do
+      local angle = i / tileSegments * self.segmentAngle
+      local xTop, yTop = polarToXY(angle, self.ringRadius)
+      local xBottom, yBottom = polarToXY(angle, self.ringRadius - self.ringHeight)
+      self.tilePolygon[i * 2 + 1], self.tilePolygon[i * 2 + 2] = xTop, yTop
+      self.tilePolygon[totalElements - (i * 2) - 1], self.tilePolygon[totalElements - (i * 2)] = xBottom, yBottom
+    end
+  end
 
   ---@type boolean[][]
   self.rings = {}
