@@ -21,6 +21,12 @@ local ringWidth = 32
 -- By how much each ring should be scaled to appear inside of the ring above it.
 local ringScaleFactor = (ringRadius - ringWidth) / ringRadius
 
+local tilePolygon = {}
+tilePolygon[1], tilePolygon[2] = polarToXY(0, ringRadius)
+tilePolygon[3], tilePolygon[4] = polarToXY(0, ringRadius - ringWidth)
+tilePolygon[5], tilePolygon[6] = polarToXY(segmentAngle, ringRadius - ringWidth)
+tilePolygon[7], tilePolygon[8] = polarToXY(segmentAngle, ringRadius)
+
 local game = {}
 
 function game:enter()
@@ -54,11 +60,7 @@ function game:drawRing(ring, depth)
       lg.push()
       local angle = (i - 1) * segmentAngle
       lg.rotate(angle)
-      local x1, y1 = polarToXY(0, ringRadius)
-      local x2, y2 = polarToXY(0, ringRadius - ringWidth)
-      local x3, y3 = polarToXY(segmentAngle, ringRadius - ringWidth)
-      local x4, y4 = polarToXY(segmentAngle, ringRadius)
-      lg.polygon("fill", x1, y1, x2, y2, x3, y3, x4, y4)
+      lg.polygon("fill", tilePolygon)
       -- lg.setColor(1, 1, 1)
       -- lg.print(i, x2, y2)
       lg.pop()
