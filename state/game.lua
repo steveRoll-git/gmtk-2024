@@ -1,66 +1,78 @@
 local love = love
 local lg = love.graphics
 
----Converts polar coordiantes to cartesian coordinates.
----@param angle number
----@param distance number
----@return number x
----@return number y
-local function polarToXY(angle, distance)
-  return math.cos(angle) * distance, math.sin(angle) * distance
-end
+local polarToXY = require "util.polarToXY"
+local Player = require "class.Player"
 
--- How many segments are in a ring.
-local segmentsInRing = 32
--- The angular size of a single segment.
-local segmentAngle = math.pi * 2 / segmentsInRing
--- The radius of a ring in pixels.
-local ringRadius = 200
--- The width of a ring in pixels.
-local ringWidth = 32
--- By how much each ring should be scaled to appear inside of the ring above it.
-local ringScaleFactor = (ringRadius - ringWidth) / ringRadius
-
-local tilePolygon = {}
-tilePolygon[1], tilePolygon[2] = polarToXY(0, ringRadius)
-tilePolygon[3], tilePolygon[4] = polarToXY(0, ringRadius - ringWidth)
-tilePolygon[5], tilePolygon[6] = polarToXY(segmentAngle, ringRadius - ringWidth)
-tilePolygon[7], tilePolygon[8] = polarToXY(segmentAngle, ringRadius)
-
+---@class Game
 local game = {}
 
 function game:enter()
+  -- How many segments are in a ring.
+  self.segmentsInRing = 32
+  -- The angular size of a single segment.
+  self.segmentAngle = math.pi * 2 / self.segmentsInRing
+  -- The radius of a ring in pixels.
+  self.ringRadius = 200
+  -- The height of a ring in pixels.
+  self.ringHeight = 36
+  -- By how much each ring should be scaled to appear inside of the ring above it.
+  self.ringScaleFactor = (self.ringRadius - self.ringHeight) / self.ringRadius
+
+  self.tilePolygon = {}
+  self.tilePolygon[1], self.tilePolygon[2] = polarToXY(0, self.ringRadius)
+  self.tilePolygon[3], self.tilePolygon[4] = polarToXY(0, self.ringRadius - self.ringHeight)
+  self.tilePolygon[5], self.tilePolygon[6] = polarToXY(self.segmentAngle, self.ringRadius - self.ringHeight)
+  self.tilePolygon[7], self.tilePolygon[8] = polarToXY(self.segmentAngle, self.ringRadius)
+
+  ---@type boolean[][]
   self.rings = {}
 
   for _ = 1, 20 do
     local newRing = {}
-    for _ = 1, segmentsInRing do
+    for _ = 1, self.segmentsInRing do
       table.insert(newRing, love.math.random() <= 0.5)
     end
     table.insert(self.rings, newRing)
   end
+
+  self.gravity = 500
+
+  ---@type Entity[]
+  self.entities = { Player:new():init(self) }
+end
+
+---Returns whether the given position is inside of a solid tile.
+---@param x number
+---@param y number
+---@return boolean
+function game:isSolid(x, y)
+  x = x % (math.pi * 2)
+  local ring = self.rings[math.floor(y / self.ringHeight) + 1]
+  if not ring then
+    return false
+  end
+  return ring[math.floor(x / self.segmentAngle) + 1]
 end
 
 ---@param ring boolean[]
 ---@param depth number
 function game:drawRing(ring, depth)
   lg.push()
-  lg.translate(lg.getWidth() / 2, lg.getHeight() / 2)
 
-  local scale = ringScaleFactor ^ depth
-  lg.scale(scale, scale)
+  lg.scale(self.ringScaleFactor ^ depth)
 
-  -- lg.setColor(1, 0, 0, 0.1)
-  -- lg.setLineWidth(1)
-  -- lg.circle("line", 0, 0, ringRadius)
+  lg.setColor(1, 0, 0, 0.1)
+  lg.setLineWidth(1)
+  lg.circle("line", 0, 0, self.ringRadius)
 
   for i, v in ipairs(ring) do
     lg.setColor(0, 0, 0)
     if v then
       lg.push()
-      local angle = (i - 1) * segmentAngle
+      local angle = (i - 1) * self.segmentAngle
       lg.rotate(angle)
-      lg.polygon("fill", tilePolygon)
+      lg.polygon("fill", self.tilePolygon)
       -- lg.setColor(1, 1, 1)
       -- lg.print(i, x2, y2)
       lg.pop()
@@ -70,9 +82,24 @@ function game:drawRing(ring, depth)
   lg.pop()
 end
 
+---@param dt number
+function game:update(dt)
+  for _, e in ipairs(self.entities) do
+    e:update(dt)
+  end
+end
+
 function game:draw()
+  lg.translate(lg.getWidth() / 2, lg.getHeight() / 2)
   for i, r in ipairs(self.rings) do
     self:drawRing(r, i - 1)
+  end
+  for _, e in ipairs(self.entities) do
+    lg.push()
+    lg.scale(self.ringScaleFactor ^ (e.y / self.ringHeight))
+    lg.rotate(e.x)
+    e:draw()
+    lg.pop()
   end
 end
 
