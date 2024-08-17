@@ -107,6 +107,13 @@ function game:draw()
   lg.translate(lg.getWidth() / 2, lg.getHeight() / 2 + self.ringRadius)
 
   lg.rotate(-self.camera.x - math.pi / 2)
+  for i = 0, self.segmentsInRing - 1 do
+    lg.push()
+    lg.rotate(i / self.segmentsInRing * math.pi * 2)
+    lg.setColor(0, 0, 0, 0.07)
+    lg.line(0, 0, self.ringRadius * 2, 0)
+    lg.pop()
+  end
   lg.scale(self.ringScaleFactor ^ (-self.camera.y / self.ringHeight))
 
   for i, r in ipairs(self.rings) do
