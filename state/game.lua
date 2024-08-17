@@ -32,16 +32,9 @@ function game:enter()
     end
   end
 
-  ---@type boolean[][]
-  self.rings = {}
-
-  for _ = 1, 20 do
-    local newRing = {}
-    for _ = 1, self.segmentsInRing do
-      table.insert(newRing, love.math.random() <= 0.5)
-    end
-    table.insert(self.rings, newRing)
-  end
+  ---@type table<number, boolean>
+  self.map = { [0] = true, true, true, true }
+  self.mapHeight = 50
 
   self.gravity = 500
 
@@ -51,10 +44,30 @@ function game:enter()
   self.entities = { self.player }
 
   self.camera = { x = 0, y = 0 }
+  self.followPlayer = true
 
   self.focalPoint = { x = lg.getWidth() / 2, y = lg.getHeight() / 2 + self.ringRadius }
 
   self.cursor = { x = 0, y = 0 }
+
+  self.visibleRowsAbove = 6
+  self.visibleRowsBelow = 24
+end
+
+---Returns the tile at the given map position
+---@param x number
+---@param y number
+---@return boolean
+function game:mapGet(x, y)
+  return self.map[y * self.segmentsInRing + x]
+end
+
+---Returns the tile at the given map position
+---@param x number
+---@param y number
+---@param v boolean
+function game:mapSet(x, y, v)
+  self.map[y * self.segmentsInRing + x] = v
 end
 
 ---Returns whether the given position is inside of a solid tile.
@@ -63,11 +76,7 @@ end
 ---@return boolean
 function game:isSolid(x, y)
   x = x % (math.pi * 2)
-  local ring = self.rings[math.floor(y / self.ringHeight) + 1]
-  if not ring then
-    return false
-  end
-  return ring[math.floor(x / self.segmentAngle) + 1]
+  return self:mapGet(math.floor(x / self.segmentAngle), math.floor(y / self.ringHeight))
 end
 
 ---@param dt number
@@ -76,8 +85,10 @@ function game:update(dt)
     e:update(dt)
   end
 
-  self.camera.x = self.player.x + self.player.width / 2
-  self.camera.y = self.player.y + self.player.height / 2
+  if self.followPlayer then
+    self.camera.x = self.player.x + self.player.width / 2
+    self.camera.y = self.player.y + self.player.height / 2
+  end
 
   local mx = love.mouse.getX() - self.focalPoint.x
   local my = love.mouse.getY() - self.focalPoint.y
@@ -85,9 +96,34 @@ function game:update(dt)
   local angle = math.atan2(my, mx) + math.pi / 2 + self.camera.x
   local distance = math.sqrt(mx ^ 2 + my ^ 2)
 
-  self.cursor.x = math.floor((angle % (math.pi * 2)) / self.segmentAngle) + 1
+  self.cursor.x = math.floor((angle % (math.pi * 2)) / self.segmentAngle)
   self.cursor.y = math.floor(
-    math.log(distance / self.ringRadius) / math.log(self.ringScaleFactor) + self.camera.y / self.ringHeight) + 1
+    math.log(distance / self.ringRadius) / math.log(self.ringScaleFactor) + self.camera.y / self.ringHeight)
+
+  if love.mouse.isDown(1, 2) and self.cursor.y >= 0 and self.cursor.y < self.mapHeight then
+    self:mapSet(self.cursor.x, self.cursor.y, love.mouse.isDown(1))
+  end
+end
+
+function game:keypressed(key)
+  if key == "f" then
+    self.followPlayer = true
+  end
+end
+
+function game:mousemoved(x, y, dx, dy)
+  if love.mouse.isDown(3) then
+    self.followPlayer = false
+    self.camera.x = (self.camera.x - dx / 100) % (math.pi * 2)
+    self.camera.y = self.camera.y - dy
+  end
+end
+
+---@param x number
+---@param y number
+function game:transformPolar(x, y)
+  lg.scale(self.ringScaleFactor ^ (y / self.ringHeight))
+  lg.rotate(x)
 end
 
 function game:draw()
@@ -99,31 +135,28 @@ function game:draw()
     lg.push()
     lg.rotate(i / self.segmentsInRing * math.pi * 2)
     lg.setColor(0, 0, 0, 0.07)
-    lg.line(0, 0, self.ringRadius * 2, 0)
+    lg.setLineWidth(1)
+    lg.line(0, 0, self.ringRadius * 4, 0)
     lg.pop()
   end
   lg.scale(self.ringScaleFactor ^ (-self.camera.y / self.ringHeight))
 
-  for y, r in ipairs(self.rings) do
+  local cameraTopTile = math.floor(self.camera.y / self.ringHeight)
+  for y = cameraTopTile - self.visibleRowsAbove, cameraTopTile + self.visibleRowsBelow - 1 do
     lg.push()
 
-    lg.scale(self.ringScaleFactor ^ (y - 1))
+    lg.scale(self.ringScaleFactor ^ y)
 
     lg.setColor(0, 0, 0, 0.07)
     lg.setLineWidth(1)
     lg.circle("line", 0, 0, self.ringRadius)
 
-    for x, v in ipairs(r) do
-      local hover = (x == self.cursor.x and y == self.cursor.y)
-      if v or hover then
+    for x = 0, self.segmentsInRing - 1 do
+      if self:mapGet(x, y) then
         lg.push()
-        local angle = (x - 1) * self.segmentAngle
+        local angle = x * self.segmentAngle
         lg.rotate(angle)
-        if hover then
-          lg.setColor(0.6, 0.3, 0)
-        else
-          lg.setColor(0, 0, 0)
-        end
+        lg.setColor(0, 0, 0)
         lg.polygon("fill", self.tilePolygon)
         lg.pop()
       end
@@ -132,10 +165,18 @@ function game:draw()
     lg.pop()
   end
 
+  lg.push()
+  self:transformPolar(self.cursor.x * self.segmentAngle, self.cursor.y * self.ringHeight)
+  lg.setColor(0.3, 0.6, 0.3, 0.5)
+  lg.polygon("fill", self.tilePolygon)
+  lg.setColor(0.3, 0.6, 0.3, 0.7)
+  lg.setLineWidth(2)
+  lg.polygon("line", self.tilePolygon)
+  lg.pop()
+
   for _, e in ipairs(self.entities) do
     lg.push()
-    lg.scale(self.ringScaleFactor ^ (e.y / self.ringHeight))
-    lg.rotate(e.x)
+    self:transformPolar(e.x, e.y)
     e:draw()
     lg.pop()
   end
