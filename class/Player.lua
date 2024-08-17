@@ -5,6 +5,8 @@ local class = require "lib.class"
 local Entity = require "class.Entity"
 local polarToXY = require "util.polarToXY"
 
+local noclipSpeedY = 300
+
 ---@class Player: Entity
 local Player = class(Entity)
 
@@ -36,6 +38,15 @@ function Player:update(dt)
     self.dx = self.moveSpeed
   else
     self.dx = 0
+  end
+  if self.noclip then
+    if love.keyboard.isDown("up") then
+      self.dy = -noclipSpeedY
+    elseif love.keyboard.isDown("down") then
+      self.dy = noclipSpeedY
+    else
+      self.dy = 0
+    end
   end
   if love.keyboard.isDown("up") and self.onGround then
     self.dy = -self.jumpForce

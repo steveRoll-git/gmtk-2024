@@ -1,7 +1,4 @@
 {
-    "Lua.diagnostics.disable": [
-        "duplicate-set-field",
-        "inject-field"
-    ],
-    "Lua.runtime.version": "LuaJIT"
+  "Lua.diagnostics.disable": ["duplicate-set-field"],
+  "Lua.runtime.version": "LuaJIT"
 }

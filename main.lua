@@ -2,7 +2,7 @@ io.stdout:setvbuf("no")
 
 love.graphics.setDefaultFilter("nearest", "nearest")
 
-local IS_DEBUG = os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" and arg[2] == "debug"
+IS_DEBUG = os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" and arg[2] == "debug"
 if IS_DEBUG then
   require("lldebugger").start()
 

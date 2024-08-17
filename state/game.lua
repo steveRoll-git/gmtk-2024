@@ -140,8 +140,12 @@ function game:update(dt)
 end
 
 function game:keypressed(key)
-  if key == "f" then
-    self.followPlayer = true
+  if IS_DEBUG then
+    if key == "f" then
+      self.followPlayer = true
+    elseif key == "n" then
+      self.player.noclip = not self.player.noclip
+    end
   end
 end
 
