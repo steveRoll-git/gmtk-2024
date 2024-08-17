@@ -4,6 +4,7 @@ local tiny = 0.0001
 
 ---@class Entity: Base
 ---@field game Game The game that this entity belongs to.
+---@field id string A unique ID to identify this entity.
 ---@field x number The angle position of the entity, in radians. Equivalent to X in cartesian coordinates.
 ---@field y number The "depth" position of the entity, in logarithmic pixels. Equivalent to Y in cartesian coordinates.
 ---@field width number The size of the entity along the X axis.
@@ -11,6 +12,8 @@ local tiny = 0.0001
 ---@field dx number The velocity along the X axis.
 ---@field dy number The velocity along the Y axis.
 ---@field onGround boolean Whether the entity is currently standing on ground.
+---@field touchingLeft boolean Whether the entity is currently touching a wall to its left.
+---@field touchingRight boolean Whether the entity is currently touching a wall to its right.
 ---@field noclip boolean Whether gravity and collision are ignored.
 local Entity = class()
 
@@ -31,17 +34,21 @@ function Entity:update(dt)
 
   self.x = (self.x + self.dx * dt) % (math.pi * 2)
 
+  self.touchingLeft = false
+  self.touchingRight = false
   if not self.noclip then
     if self.dx > 0 then
       if self.game:isSolid(self.x + self.width, self.y + tiny) or self.game:isSolid(self.x + self.width, self.y + self.height - tiny) then
         local edgeX = math.floor((self.x + self.width) / self.game.segmentAngle) * self.game.segmentAngle
         self.x = edgeX - self.width
         self.dx = 0
+        self.touchingRight = true
       end
     elseif self.dx < 0 then
       if self.game:isSolid(self.x, self.y + tiny) or self.game:isSolid(self.x, self.y + self.height - tiny) then
         self.x = math.ceil(self.x / self.game.segmentAngle) * self.game.segmentAngle
         self.dx = 0
+        self.touchingLeft = true
       end
     end
   end

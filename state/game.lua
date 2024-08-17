@@ -4,13 +4,17 @@ local lg = love.graphics
 local Player = require "class.Player"
 local ffi = require "ffi"
 local polarPolygon = require "util.polarPolygon"
+local Crawler = require "class.Crawler"
 
 local tilesFilename = "map/tiles"
 local entitiesFilename = "map/entities.lua"
 
 local mapEntityColors = {
-  playerStart = { 0.4, 0.7, 0.9, 0.4 }
+  playerStart = { 0.4, 0.7, 0.9, 0.4 },
+  crawler = { 0.8, 0.4, 0.4, 0.4 }
 }
+
+local entityTypes = { "playerStart", "crawler" }
 
 local function gamePath(path)
   return love.filesystem.getSource() .. "/" .. path
@@ -56,7 +60,8 @@ function game:enter()
     if e.type == "playerStart" then
       self.player.x = e.x * self.segmentAngle
       self.player.y = e.y * self.ringHeight
-      break
+    else
+      self:processMapEntity(e)
     end
   end
 
@@ -70,9 +75,8 @@ function game:enter()
   self.visibleRowsAbove = 6
   self.visibleRowsBelow = 24
 
-  self.entityTypes = { "playerStart" }
   if IS_DEBUG then
-    self.editorEntityType = self.entityTypes[1]
+    self.editorEntityType = entityTypes[1]
   end
 end
 
@@ -135,9 +139,22 @@ function game:saveMap()
       end
       file:write("  },\n")
     end
-    file:write("}")
+    file:write("}\n")
     file:close()
   end
+end
+
+function game:processMapEntity(e)
+  local new
+  if e.type == "crawler" then
+    new = Crawler:new():init(self)
+    new.x = e.x * self.segmentAngle
+    new.y = e.y * self.ringHeight
+  else
+    error("unknown entity type: " .. e.type)
+  end
+  new.id = tostring(e)
+  table.insert(self.entities, new)
 end
 
 ---Returns whether the given position is inside of a solid tile.
@@ -182,17 +199,23 @@ function game:keypressed(key)
     elseif key == "n" then
       self.player.noclip = not self.player.noclip
     elseif key == "e" then
-      table.insert(self.mapEntities, {
+      local e = {
         x = self.cursor.x,
         y = self.cursor.y,
         type = self.editorEntityType
-      })
+      }
+      table.insert(self.mapEntities, e)
+      self:processMapEntity(e)
     elseif key == "d" then
       for i, e in ipairs(self.mapEntities) do
         if e.x == self.cursor.x and e.y == self.cursor.y then
           table.remove(self.mapEntities, i)
           break
         end
+      end
+    elseif key >= "1" and key <= "9" then
+      if tonumber(key) <= #entityTypes then
+        self.editorEntityType = entityTypes[tonumber(key)]
       end
     end
   end
@@ -252,23 +275,16 @@ function game:draw()
     lg.pop()
   end
 
-  lg.push()
-  self:transformPolar(self.cursor.x * self.segmentAngle, self.cursor.y * self.ringHeight)
-  lg.setColor(0.3, 0.6, 0.3, 0.5)
-  lg.polygon("fill", self.tilePolygon)
-  lg.setColor(0.3, 0.6, 0.3, 0.7)
-  lg.setLineWidth(2)
-  lg.polygon("line", self.tilePolygon)
-  lg.pop()
-
-  for _, e in ipairs(self.entities) do
-    lg.push()
-    self:transformPolar(e.x, e.y)
-    e:draw()
-    lg.pop()
-  end
-
   if IS_DEBUG then
+    lg.push()
+    self:transformPolar(self.cursor.x * self.segmentAngle, self.cursor.y * self.ringHeight)
+    lg.setColor(0.3, 0.6, 0.3, 0.5)
+    lg.polygon("fill", self.tilePolygon)
+    lg.setColor(0.3, 0.6, 0.3, 0.7)
+    lg.setLineWidth(2)
+    lg.polygon("line", self.tilePolygon)
+    lg.pop()
+
     for _, e in ipairs(self.mapEntities) do
       lg.push()
       self:transformPolar(e.x * self.segmentAngle, e.y * self.ringHeight)
@@ -276,6 +292,13 @@ function game:draw()
       lg.polygon("fill", self.tilePolygon)
       lg.pop()
     end
+  end
+
+  for _, e in ipairs(self.entities) do
+    lg.push()
+    self:transformPolar(e.x, e.y)
+    e:draw()
+    lg.pop()
   end
 
   lg.pop()

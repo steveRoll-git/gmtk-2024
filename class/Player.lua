@@ -13,8 +13,6 @@ local Player = class(Entity)
 ---@param game Game
 function Player:init(game)
   Entity.init(self, game)
-  self.x = 0
-  self.y = -game.ringHeight
   self.width = game.segmentAngle * (3 / 4)
   self.height = game.ringHeight * (3 / 4)
 
