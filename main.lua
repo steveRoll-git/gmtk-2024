@@ -13,9 +13,17 @@ end
 
 local manager = require "lib.roomy".new()
 
+local game = require "state.game"
+
 love.graphics.setBackgroundColor(1, 1, 1)
 
 function love.load(arg)
   manager:hook()
-  manager:enter(require "state.game")
+  manager:enter(game)
+end
+
+function love.quit()
+  if IS_DEBUG then
+    game:saveMap()
+  end
 end

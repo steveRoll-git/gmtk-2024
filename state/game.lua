@@ -5,6 +5,12 @@ local polarToXY = require "util.polarToXY"
 local Player = require "class.Player"
 local ffi = require "ffi"
 
+local tilesFilename = "map/tiles"
+
+local function gamePath(path)
+  return love.filesystem.getSource() .. "/" .. path
+end
+
 ---@class Game
 local game = {}
 
@@ -35,9 +41,11 @@ function game:enter()
 
   self.mapHeight = 50
   self.map = ffi.new("uint8_t[?]", self.segmentsInRing * self.mapHeight)
-  self.map[0] = 1
-  self.map[1] = 1
-  self.map[2] = 1
+
+  local mapData = love.filesystem.read(tilesFilename)
+  if mapData then
+    ffi.copy(self.map, mapData, ffi.sizeof(self.map) --[[@as integer]])
+  end
 
   self.gravity = 500
 
@@ -82,6 +90,18 @@ end
 ---@param v number
 function game:mapSet(x, y, v)
   self.map[y * self.segmentsInRing + x] = v
+end
+
+function game:saveMap()
+  if love.filesystem.isFused() then
+    return
+  end
+  local file, err = io.open(gamePath(tilesFilename), "w+b")
+  if not file then
+    error(err)
+  end
+  file:write(ffi.string(self.map, ffi.sizeof(self.map)))
+  file:close()
 end
 
 ---Returns whether the given position is inside of a solid tile.
