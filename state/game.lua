@@ -16,6 +16,25 @@ local mapEntityColors = {
 
 local entityTypes = { "playerStart", "crawler" }
 
+---Returns whether two entities are colliding.
+---@param e1 Entity
+---@param e2 Entity
+local function entitiesAABB(e1, e2)
+  local x1, y1, w1, h1 = e1.x, e1.y, e1.width, e1.height
+  local x2, y2, w2, h2 = e2.x, e2.y, e2.width, e2.height
+  if x1 + w1 >= math.pi * 2 then
+    x1 = x1 - math.pi * 2
+  end
+  if x2 + w2 >= math.pi * 2 then
+    x2 = x2 - math.pi * 2
+  end
+  return
+      x1 < x2 + w2 and
+      x2 < x1 + w1 and
+      y1 < y2 + h2 and
+      y2 < y1 + h1
+end
+
 local function gamePath(path)
   return love.filesystem.getSource() .. "/" .. path
 end
@@ -176,8 +195,25 @@ end
 
 ---@param dt number
 function game:update(dt)
-  for _, e in ipairs(self.entities) do
+  local toRemove = {}
+
+  for i, e in ipairs(self.entities) do
     e:update(dt)
+    if e.onCollision then
+      for _, e2 in ipairs(self.entities) do
+        if e ~= e2 and e2.solid and entitiesAABB(e, e2) then
+          e:onCollision(e2)
+        end
+      end
+    end
+    if e.remove then
+      table.insert(toRemove, i)
+    end
+  end
+
+  for i = #toRemove, 1, -1 do
+    local index = toRemove[i]
+    self.entities[index], self.entities[#self.entities] = self.entities[#self.entities], nil
   end
 
   if self.followPlayer then

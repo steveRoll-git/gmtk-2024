@@ -21,6 +21,8 @@ function Player:init(game)
   self.moveSpeed = 1
   self.jumpForce = 300
 
+  self.solid = true
+
   return self
 end
 
@@ -46,6 +48,13 @@ function Player:update(dt)
     self.dy = -self.jumpForce
   end
   Entity.update(self, dt)
+end
+
+---@param other Entity
+function Player:onCollision(other)
+  if other.hurt then
+    self.remove = true
+  end
 end
 
 function Player:draw()

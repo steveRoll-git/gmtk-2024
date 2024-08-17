@@ -15,6 +15,10 @@ local tiny = 0.0001
 ---@field touchingLeft boolean Whether the entity is currently touching a wall to its left.
 ---@field touchingRight boolean Whether the entity is currently touching a wall to its right.
 ---@field noclip boolean Whether gravity and collision are ignored.
+---@field solid boolean? Whether this entity can collide with other entities.
+---@field hurt boolean? Whether this entity should kill the player when they collide.
+---@field onCollision? fun(self: Entity, other: Entity) A function that is called when this entity collides with another one.
+---@field remove? boolean Whether this entity should be removed.
 local Entity = class()
 
 ---@param game Game

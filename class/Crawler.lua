@@ -20,6 +20,9 @@ function Crawler:init(game)
   self.dx = self.moveSpeed
   self.dy = 0
 
+  self.solid = true
+  self.hurt = true
+
   return self
 end
 
@@ -33,7 +36,7 @@ function Crawler:update(dt)
 end
 
 function Crawler:draw()
-  lg.setColor(0.8, 0.3, 0.3)
+  lg.setColor(0.9, 0.3, 0.2)
   lg.polygon("fill", self.polygon)
 end
 
