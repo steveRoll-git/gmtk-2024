@@ -45,8 +45,12 @@ function game:enter()
 
   self.gravity = 500
 
+  self.player = Player:new():init(self)
+
   ---@type Entity[]
-  self.entities = { Player:new():init(self) }
+  self.entities = { self.player }
+
+  self.camera = { x = 0, y = 0 }
 end
 
 ---Returns whether the given position is inside of a solid tile.
@@ -69,7 +73,7 @@ function game:drawRing(ring, depth)
 
   lg.scale(self.ringScaleFactor ^ depth)
 
-  lg.setColor(1, 0, 0, 0.1)
+  lg.setColor(0, 0, 0, 0.07)
   lg.setLineWidth(1)
   lg.circle("line", 0, 0, self.ringRadius)
 
@@ -94,13 +98,21 @@ function game:update(dt)
   for _, e in ipairs(self.entities) do
     e:update(dt)
   end
+  self.camera.x = self.player.x + self.player.width / 2
+  self.camera.y = self.player.y + self.player.height / 2
 end
 
 function game:draw()
-  lg.translate(lg.getWidth() / 2, lg.getHeight() / 2)
+  lg.push()
+  lg.translate(lg.getWidth() / 2, lg.getHeight() / 2 + self.ringRadius)
+
+  lg.rotate(-self.camera.x - math.pi / 2)
+  lg.scale(self.ringScaleFactor ^ (-self.camera.y / self.ringHeight))
+
   for i, r in ipairs(self.rings) do
     self:drawRing(r, i - 1)
   end
+
   for _, e in ipairs(self.entities) do
     lg.push()
     lg.scale(self.ringScaleFactor ^ (e.y / self.ringHeight))
@@ -108,6 +120,8 @@ function game:draw()
     e:draw()
     lg.pop()
   end
+
+  lg.pop()
 end
 
 return game
