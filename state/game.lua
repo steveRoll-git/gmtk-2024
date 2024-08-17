@@ -3,6 +3,7 @@ local lg = love.graphics
 
 local polarToXY = require "util.polarToXY"
 local Player = require "class.Player"
+local ffi = require "ffi"
 
 ---@class Game
 local game = {}
@@ -32,9 +33,11 @@ function game:enter()
     end
   end
 
-  ---@type table<number, boolean>
-  self.map = { [0] = true, true, true, true }
   self.mapHeight = 50
+  self.map = ffi.new("uint8_t[?]", self.segmentsInRing * self.mapHeight)
+  self.map[0] = 1
+  self.map[1] = 1
+  self.map[2] = 1
 
   self.gravity = 500
 
@@ -54,18 +57,29 @@ function game:enter()
   self.visibleRowsBelow = 24
 end
 
----Returns the tile at the given map position
+---Returns whether the given position is inside of the map.
 ---@param x number
 ---@param y number
 ---@return boolean
+function game:inMap(x, y)
+  return x >= 0 and x < self.segmentsInRing and y >= 0 and y < self.mapHeight
+end
+
+---Returns the tile at the given map position
+---@param x number
+---@param y number
+---@return number
 function game:mapGet(x, y)
+  if not self:inMap(x, y) then
+    return 0
+  end
   return self.map[y * self.segmentsInRing + x]
 end
 
 ---Returns the tile at the given map position
 ---@param x number
 ---@param y number
----@param v boolean
+---@param v number
 function game:mapSet(x, y, v)
   self.map[y * self.segmentsInRing + x] = v
 end
@@ -76,7 +90,7 @@ end
 ---@return boolean
 function game:isSolid(x, y)
   x = x % (math.pi * 2)
-  return self:mapGet(math.floor(x / self.segmentAngle), math.floor(y / self.ringHeight))
+  return self:mapGet(math.floor(x / self.segmentAngle), math.floor(y / self.ringHeight)) > 0
 end
 
 ---@param dt number
@@ -100,8 +114,8 @@ function game:update(dt)
   self.cursor.y = math.floor(
     math.log(distance / self.ringRadius) / math.log(self.ringScaleFactor) + self.camera.y / self.ringHeight)
 
-  if love.mouse.isDown(1, 2) and self.cursor.y >= 0 and self.cursor.y < self.mapHeight then
-    self:mapSet(self.cursor.x, self.cursor.y, love.mouse.isDown(1))
+  if love.mouse.isDown(1, 2) and self:inMap(self.cursor.x, self.cursor.y) then
+    self:mapSet(self.cursor.x, self.cursor.y, love.mouse.isDown(1) and 1 or 0)
   end
 end
 
@@ -152,7 +166,7 @@ function game:draw()
     lg.circle("line", 0, 0, self.ringRadius)
 
     for x = 0, self.segmentsInRing - 1 do
-      if self:mapGet(x, y) then
+      if self:mapGet(x, y) == 1 then
         lg.push()
         local angle = x * self.segmentAngle
         lg.rotate(angle)
