@@ -6,12 +6,12 @@ return {
   },
   {
     type = "crawler",
-    x = 22,
+    x = 0,
     y = 28,
   },
   {
     type = "crawler",
-    x = 0,
+    x = 22,
     y = 28,
   },
   {

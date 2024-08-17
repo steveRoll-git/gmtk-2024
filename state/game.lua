@@ -143,6 +143,9 @@ function game:saveMap()
     end
 
     table.sort(self.mapEntities, function(a, b)
+      if a.y == b.y then
+        return a.x < b.x
+      end
       return a.y < b.y
     end)
 
