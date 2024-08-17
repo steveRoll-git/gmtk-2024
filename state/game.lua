@@ -1,9 +1,9 @@
 local love = love
 local lg = love.graphics
 
-local polarToXY = require "util.polarToXY"
 local Player = require "class.Player"
 local ffi = require "ffi"
+local polarPolygon = require "util.polarPolygon"
 
 local tilesFilename = "map/tiles"
 local entitiesFilename = "map/entities.lua"
@@ -31,18 +31,7 @@ function game:enter()
   -- By how much each ring should be scaled to appear inside of the ring above it.
   self.ringScaleFactor = (self.ringRadius - self.ringHeight) / self.ringRadius
 
-  do
-    self.tilePolygon = {}
-    local tileSegments = 3
-    local totalElements = (tileSegments + 1) * 4
-    for i = 0, tileSegments do
-      local angle = i / tileSegments * self.segmentAngle
-      local xTop, yTop = polarToXY(angle, self.ringRadius)
-      local xBottom, yBottom = polarToXY(angle, self.ringRadius - self.ringHeight)
-      self.tilePolygon[i * 2 + 1], self.tilePolygon[i * 2 + 2] = xTop, yTop
-      self.tilePolygon[totalElements - (i * 2) - 1], self.tilePolygon[totalElements - (i * 2)] = xBottom, yBottom
-    end
-  end
+  self.tilePolygon = polarPolygon(self.segmentAngle, self.ringRadius, self.ringHeight, 3)
 
   self.mapHeight = 50
   self.map = ffi.new("uint8_t[?]", self.segmentsInRing * self.mapHeight)

@@ -3,7 +3,7 @@ local lg = love.graphics
 
 local class = require "lib.class"
 local Entity = require "class.Entity"
-local polarToXY = require "util.polarToXY"
+local polarPolygon = require "util.polarPolygon"
 
 local noclipSpeedY = 300
 
@@ -18,11 +18,7 @@ function Player:init(game)
   self.width = game.segmentAngle * (3 / 4)
   self.height = game.ringHeight * (3 / 4)
 
-  self.polygon = {}
-  self.polygon[1], self.polygon[2] = polarToXY(0, game.ringRadius)
-  self.polygon[3], self.polygon[4] = polarToXY(0, game.ringRadius - self.height)
-  self.polygon[5], self.polygon[6] = polarToXY(self.width, game.ringRadius - self.height)
-  self.polygon[7], self.polygon[8] = polarToXY(self.width, game.ringRadius)
+  self.polygon = polarPolygon(self.width, game.ringRadius, self.height, 2)
 
   self.moveSpeed = 1
   self.jumpForce = 300
