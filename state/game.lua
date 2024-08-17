@@ -181,7 +181,12 @@ function game:processMapEntity(e)
     error("unknown entity type: " .. e.type)
   end
   new.id = tostring(e)
-  table.insert(self.entities, new)
+  self:addEntity(new)
+end
+
+---@param e Entity
+function game:addEntity(e)
+  table.insert(self.entities, e)
 end
 
 ---Returns whether the given position is inside of a solid tile.
@@ -217,8 +222,8 @@ function game:update(dt)
   end
 
   if self.followPlayer then
-    self.camera.x = self.player.x + self.player.width / 2
-    self.camera.y = self.player.y + self.player.height / 2
+    self.camera.x = self.player:midX()
+    self.camera.y = self.player:midY()
   end
 
   if self.debug then
@@ -353,7 +358,8 @@ function game:draw()
   lg.pop()
 
   if self.debug then
-    local text = ([[Entity: %s]]):format(self.editorEntityType)
+    local text = ([[Entity: %s
+%d]]):format(self.editorEntityType, #self.entities)
     local width, lines = lg.getFont():getWrap(text, 300)
     lg.setColor(0, 0, 0, 0.6)
     lg.rectangle("fill", 0, 0, width, #lines * lg.getFont():getHeight() * 1.2)

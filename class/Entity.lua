@@ -30,6 +30,14 @@ function Entity:init(game)
   return self
 end
 
+function Entity:midX()
+  return self.x + self.width / 2
+end
+
+function Entity:midY()
+  return self.y + self.height / 2
+end
+
 ---@param dt number
 function Entity:update(dt)
   if not self.noclip then
@@ -40,7 +48,7 @@ function Entity:update(dt)
 
   self.touchingLeft = false
   self.touchingRight = false
-  if not self.noclip then
+  if self.solid and not self.noclip then
     if self.dx > 0 then
       if self.game:isSolid(self.x + self.width, self.y + tiny) or self.game:isSolid(self.x + self.width, self.y + self.height - tiny) then
         local edgeX = math.floor((self.x + self.width) / self.game.segmentAngle) * self.game.segmentAngle
@@ -60,7 +68,7 @@ function Entity:update(dt)
   self.y = self.y + self.dy * dt
   self.onGround = false
 
-  if not self.noclip then
+  if self.solid and not self.noclip then
     if self.dy > 0 then
       if self.game:isSolid(self.x + tiny, self.y + self.height) or self.game:isSolid(self.x + self.width - tiny, self.y + self.height) then
         local edgeY = math.floor((self.y + self.height) / self.game.ringHeight) * self.game.ringHeight

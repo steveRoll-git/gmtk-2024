@@ -4,6 +4,8 @@ local lg = love.graphics
 local class = require "lib.class"
 local Entity = require "class.Entity"
 local polarPolygon = require "util.polarPolygon"
+local Particle = require "class.Particle"
+local randFloat = require "util.randFloat"
 
 local noclipSpeedY = 300
 
@@ -23,7 +25,27 @@ function Player:init(game)
 
   self.solid = true
 
+  self.color = { 0.4, 0.7, 0.9 }
+
   return self
+end
+
+function Player:die()
+  self.remove = true
+  for _ = 1, 30 do
+    local x = randFloat(self.x, self.x + self.width)
+    local y = randFloat(self.y, self.y + self.height)
+    local p = Particle:new():init(
+      self.game,
+      x, y,
+      (x - self:midX()) * 1.5,
+      (y - self:midY()) * 1.5,
+      randFloat(3, 6),
+      randFloat(0.5, 1.5),
+      self.color
+    )
+    self.game:addEntity(p)
+  end
 end
 
 ---@param dt number
@@ -53,12 +75,12 @@ end
 ---@param other Entity
 function Player:onCollision(other)
   if other.hurt then
-    self.remove = true
+    self:die()
   end
 end
 
 function Player:draw()
-  lg.setColor(0.4, 0.7, 0.9)
+  lg.setColor(self.color)
   lg.polygon("fill", self.polygon)
 end
 
