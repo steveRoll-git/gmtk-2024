@@ -51,6 +51,10 @@ function game:enter()
   self.entities = { self.player }
 
   self.camera = { x = 0, y = 0 }
+
+  self.focalPoint = { x = lg.getWidth() / 2, y = lg.getHeight() / 2 + self.ringRadius }
+
+  self.cursor = { x = 0, y = 0 }
 end
 
 ---Returns whether the given position is inside of a solid tile.
@@ -66,45 +70,29 @@ function game:isSolid(x, y)
   return ring[math.floor(x / self.segmentAngle) + 1]
 end
 
----@param ring boolean[]
----@param depth number
-function game:drawRing(ring, depth)
-  lg.push()
-
-  lg.scale(self.ringScaleFactor ^ depth)
-
-  lg.setColor(0, 0, 0, 0.07)
-  lg.setLineWidth(1)
-  lg.circle("line", 0, 0, self.ringRadius)
-
-  for i, v in ipairs(ring) do
-    lg.setColor(0, 0, 0)
-    if v then
-      lg.push()
-      local angle = (i - 1) * self.segmentAngle
-      lg.rotate(angle)
-      lg.polygon("fill", self.tilePolygon)
-      -- lg.setColor(1, 1, 1)
-      -- lg.print(i, x2, y2)
-      lg.pop()
-    end
-  end
-
-  lg.pop()
-end
-
 ---@param dt number
 function game:update(dt)
   for _, e in ipairs(self.entities) do
     e:update(dt)
   end
+
   self.camera.x = self.player.x + self.player.width / 2
   self.camera.y = self.player.y + self.player.height / 2
+
+  local mx = love.mouse.getX() - self.focalPoint.x
+  local my = love.mouse.getY() - self.focalPoint.y
+
+  local angle = math.atan2(my, mx) + math.pi / 2 + self.camera.x
+  local distance = math.sqrt(mx ^ 2 + my ^ 2)
+
+  self.cursor.x = math.floor((angle % (math.pi * 2)) / self.segmentAngle) + 1
+  self.cursor.y = math.floor(
+    math.log(distance / self.ringRadius) / math.log(self.ringScaleFactor) + self.camera.y / self.ringHeight) + 1
 end
 
 function game:draw()
   lg.push()
-  lg.translate(lg.getWidth() / 2, lg.getHeight() / 2 + self.ringRadius)
+  lg.translate(self.focalPoint.x, self.focalPoint.y)
 
   lg.rotate(-self.camera.x - math.pi / 2)
   for i = 0, self.segmentsInRing - 1 do
@@ -116,8 +104,32 @@ function game:draw()
   end
   lg.scale(self.ringScaleFactor ^ (-self.camera.y / self.ringHeight))
 
-  for i, r in ipairs(self.rings) do
-    self:drawRing(r, i - 1)
+  for y, r in ipairs(self.rings) do
+    lg.push()
+
+    lg.scale(self.ringScaleFactor ^ (y - 1))
+
+    lg.setColor(0, 0, 0, 0.07)
+    lg.setLineWidth(1)
+    lg.circle("line", 0, 0, self.ringRadius)
+
+    for x, v in ipairs(r) do
+      local hover = (x == self.cursor.x and y == self.cursor.y)
+      if v or hover then
+        lg.push()
+        local angle = (x - 1) * self.segmentAngle
+        lg.rotate(angle)
+        if hover then
+          lg.setColor(0.6, 0.3, 0)
+        else
+          lg.setColor(0, 0, 0)
+        end
+        lg.polygon("fill", self.tilePolygon)
+        lg.pop()
+      end
+    end
+
+    lg.pop()
   end
 
   for _, e in ipairs(self.entities) do
