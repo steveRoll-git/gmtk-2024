@@ -33,7 +33,7 @@ function game:enter()
 
   do
     self.tilePolygon = {}
-    local tileSegments = 2
+    local tileSegments = 3
     local totalElements = (tileSegments + 1) * 4
     for i = 0, tileSegments do
       local angle = i / tileSegments * self.segmentAngle
