@@ -6,6 +6,11 @@ local Player = require "class.Player"
 local ffi = require "ffi"
 
 local tilesFilename = "map/tiles"
+local entitiesFilename = "map/entities.lua"
+
+local mapEntityColors = {
+  playerStart = { 0.4, 0.7, 0.9, 0.4 }
+}
 
 local function gamePath(path)
   return love.filesystem.getSource() .. "/" .. path
@@ -47,12 +52,24 @@ function game:enter()
     ffi.copy(self.map, mapData, ffi.sizeof(self.map) --[[@as integer]])
   end
 
+  self.mapEntities = {}
+  if love.filesystem.getInfo(entitiesFilename) then
+    self.mapEntities = love.filesystem.load(entitiesFilename)()
+  end
+
   self.gravity = 500
 
   self.player = Player:new():init(self)
 
   ---@type Entity[]
   self.entities = { self.player }
+  for _, e in ipairs(self.mapEntities) do
+    if e.type == "playerStart" then
+      self.player.x = e.x * self.segmentAngle
+      self.player.y = e.y * self.ringHeight
+      break
+    end
+  end
 
   self.camera = { x = 0, y = 0 }
   self.followPlayer = true
@@ -63,6 +80,11 @@ function game:enter()
 
   self.visibleRowsAbove = 6
   self.visibleRowsBelow = 24
+
+  self.entityTypes = { "playerStart" }
+  if IS_DEBUG then
+    self.editorEntityType = self.entityTypes[1]
+  end
 end
 
 ---Returns whether the given position is inside of the map.
@@ -96,12 +118,37 @@ function game:saveMap()
   if love.filesystem.isFused() then
     return
   end
-  local file, err = io.open(gamePath(tilesFilename), "w+b")
-  if not file then
-    error(err)
+  do
+    local file, err = io.open(gamePath(tilesFilename), "w+b")
+    if not file then
+      error(err)
+    end
+    file:write(ffi.string(self.map, ffi.sizeof(self.map)))
+    file:close()
   end
-  file:write(ffi.string(self.map, ffi.sizeof(self.map)))
-  file:close()
+
+  do
+    local file, err = io.open(gamePath(entitiesFilename), "w+")
+    if not file then
+      error(err)
+    end
+    file:write("return {\n")
+    for _, e in ipairs(self.mapEntities) do
+      file:write("  {\n")
+      local keys = {}
+      for k, v in pairs(e) do
+        table.insert(keys, k)
+      end
+      table.sort(keys)
+      for _, k in ipairs(keys) do
+        local v = e[k]
+        file:write(("    %s = %s,\n"):format(k, type(v) == "string" and ("%q"):format(v) or v))
+      end
+      file:write("  },\n")
+    end
+    file:write("}")
+    file:close()
+  end
 end
 
 ---Returns whether the given position is inside of a solid tile.
@@ -145,12 +192,25 @@ function game:keypressed(key)
       self.followPlayer = true
     elseif key == "n" then
       self.player.noclip = not self.player.noclip
+    elseif key == "e" then
+      table.insert(self.mapEntities, {
+        x = self.cursor.x,
+        y = self.cursor.y,
+        type = self.editorEntityType
+      })
+    elseif key == "d" then
+      for i, e in ipairs(self.mapEntities) do
+        if e.x == self.cursor.x and e.y == self.cursor.y then
+          table.remove(self.mapEntities, i)
+          break
+        end
+      end
     end
   end
 end
 
 function game:mousemoved(x, y, dx, dy)
-  if love.mouse.isDown(3) then
+  if IS_DEBUG and love.mouse.isDown(3) then
     self.followPlayer = false
     self.camera.x = (self.camera.x - dx / 100) % (math.pi * 2)
     self.camera.y = self.camera.y - dy
@@ -219,7 +279,26 @@ function game:draw()
     lg.pop()
   end
 
+  if IS_DEBUG then
+    for _, e in ipairs(self.mapEntities) do
+      lg.push()
+      self:transformPolar(e.x * self.segmentAngle, e.y * self.ringHeight)
+      lg.setColor(mapEntityColors[e.type])
+      lg.polygon("fill", self.tilePolygon)
+      lg.pop()
+    end
+  end
+
   lg.pop()
+
+  if IS_DEBUG then
+    local text = ([[Entity: %s]]):format(self.editorEntityType)
+    local width, lines = lg.getFont():getWrap(text, 300)
+    lg.setColor(0, 0, 0, 0.6)
+    lg.rectangle("fill", 0, 0, width, #lines * lg.getFont():getHeight() * 1.2)
+    lg.setColor(1, 1, 1)
+    lg.print(text)
+  end
 end
 
 return game
