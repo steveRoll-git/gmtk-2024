@@ -78,6 +78,8 @@ function game:enter()
   if IS_DEBUG then
     self.editorEntityType = entityTypes[1]
   end
+
+  self.debug = IS_DEBUG
 end
 
 ---Returns whether the given position is inside of the map.
@@ -177,23 +179,28 @@ function game:update(dt)
     self.camera.y = self.player.y + self.player.height / 2
   end
 
-  local mx = love.mouse.getX() - self.focalPoint.x
-  local my = love.mouse.getY() - self.focalPoint.y
+  if self.debug then
+    local mx = love.mouse.getX() - self.focalPoint.x
+    local my = love.mouse.getY() - self.focalPoint.y
 
-  local angle = math.atan2(my, mx) + math.pi / 2 + self.camera.x
-  local distance = math.sqrt(mx ^ 2 + my ^ 2)
+    local angle = math.atan2(my, mx) + math.pi / 2 + self.camera.x
+    local distance = math.sqrt(mx ^ 2 + my ^ 2)
 
-  self.cursor.x = math.floor((angle % (math.pi * 2)) / self.segmentAngle)
-  self.cursor.y = math.floor(
-    math.log(distance / self.ringRadius) / math.log(self.ringScaleFactor) + self.camera.y / self.ringHeight)
+    self.cursor.x = math.floor((angle % (math.pi * 2)) / self.segmentAngle)
+    self.cursor.y = math.floor(
+      math.log(distance / self.ringRadius) / math.log(self.ringScaleFactor) + self.camera.y / self.ringHeight)
 
-  if love.mouse.isDown(1, 2) and self:inMap(self.cursor.x, self.cursor.y) then
-    self:mapSet(self.cursor.x, self.cursor.y, love.mouse.isDown(1) and 1 or 0)
+    if love.mouse.isDown(1, 2) and self:inMap(self.cursor.x, self.cursor.y) then
+      self:mapSet(self.cursor.x, self.cursor.y, love.mouse.isDown(1) and 1 or 0)
+    end
   end
 end
 
 function game:keypressed(key)
-  if IS_DEBUG then
+  if key == "f1" and IS_DEBUG then
+    self.debug = not self.debug
+  end
+  if self.debug then
     if key == "f" then
       self.followPlayer = true
     elseif key == "n" then
@@ -222,7 +229,7 @@ function game:keypressed(key)
 end
 
 function game:mousemoved(x, y, dx, dy)
-  if IS_DEBUG and love.mouse.isDown(3) then
+  if self.debug and love.mouse.isDown(3) then
     self.followPlayer = false
     self.camera.x = (self.camera.x - dx / 100) % (math.pi * 2)
     self.camera.y = self.camera.y - dy
@@ -275,7 +282,7 @@ function game:draw()
     lg.pop()
   end
 
-  if IS_DEBUG then
+  if self.debug then
     lg.push()
     self:transformPolar(self.cursor.x * self.segmentAngle, self.cursor.y * self.ringHeight)
     lg.setColor(0.3, 0.6, 0.3, 0.5)
@@ -303,7 +310,7 @@ function game:draw()
 
   lg.pop()
 
-  if IS_DEBUG then
+  if self.debug then
     local text = ([[Entity: %s]]):format(self.editorEntityType)
     local width, lines = lg.getFont():getWrap(text, 300)
     lg.setColor(0, 0, 0, 0.6)
