@@ -57,12 +57,7 @@ function game:enter()
   ---@type Entity[]
   self.entities = { self.player }
   for _, e in ipairs(self.mapEntities) do
-    if e.type == "playerStart" then
-      self.player.x = e.x * self.segmentAngle
-      self.player.y = e.y * self.ringHeight
-    else
-      self:processMapEntity(e)
-    end
+    self:processMapEntity(e)
   end
 
   self.camera = { x = 0, y = 0 }
@@ -127,6 +122,11 @@ function game:saveMap()
     if not file then
       error(err)
     end
+
+    table.sort(self.mapEntities, function(a, b)
+      return a.y < b.y
+    end)
+
     file:write("return {\n")
     for _, e in ipairs(self.mapEntities) do
       file:write("  {\n")
@@ -147,6 +147,12 @@ function game:saveMap()
 end
 
 function game:processMapEntity(e)
+  if e.type == "playerStart" then
+    self.player.x = e.x * self.segmentAngle
+    self.player.y = e.y * self.ringHeight
+    return
+  end
+
   local new
   if e.type == "crawler" then
     new = Crawler:new():init(self)
