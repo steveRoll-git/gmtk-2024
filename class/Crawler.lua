@@ -20,7 +20,7 @@ function Crawler:init(game)
   self.dx = self.moveSpeed
   self.dy = 0
 
-  self.solid = true
+  self.collideable = true
   self.hurt = true
 
   return self

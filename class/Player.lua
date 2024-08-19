@@ -6,6 +6,7 @@ local Entity = require "class.Entity"
 local polarPolygon = require "util.polarPolygon"
 local Particle = require "class.Particle"
 local randFloat = require "util.randFloat"
+local Checkpoint = require "class.Checkpoint"
 
 local noclipSpeedY = 300
 
@@ -23,7 +24,7 @@ function Player:init(game)
   self.moveSpeed = 1
   self.jumpForce = 300
 
-  self.solid = true
+  self.collideable = true
 
   self.color = { 0.4, 0.7, 0.9 }
 
@@ -46,6 +47,10 @@ function Player:die()
     )
     self.game:addEntity(p)
   end
+
+  self.game:after(1, function()
+    self.game:respawnPlayer()
+  end)
 end
 
 ---@param dt number
@@ -76,6 +81,8 @@ end
 function Player:onCollision(other)
   if other.hurt then
     self:die()
+  elseif other:is(Checkpoint) then
+    self.game.checkpointPos = { x = other.x, y = other.y }
   end
 end
 

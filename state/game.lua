@@ -5,16 +5,22 @@ local Player = require "class.Player"
 local ffi = require "ffi"
 local polarPolygon = require "util.polarPolygon"
 local Crawler = require "class.Crawler"
+local Checkpoint = require "class.Checkpoint"
+
+---@class Timer
+---@field time number
+---@field action function
 
 local tilesFilename = "map/tiles"
 local entitiesFilename = "map/entities.lua"
 
 local mapEntityColors = {
   playerStart = { 0.4, 0.7, 0.9, 0.4 },
-  crawler = { 0.8, 0.4, 0.4, 0.4 }
+  checkpoint = { 0.2, 0.7, 0.2, 0.4 },
+  crawler = { 0.8, 0.4, 0.4, 0.4 },
 }
 
-local entityTypes = { "playerStart", "crawler" }
+local entityTypes = { "playerStart", "checkpoint", "crawler" }
 
 ---Returns whether two entities are colliding.
 ---@param e1 Entity
@@ -79,6 +85,8 @@ function game:enter()
     self:processMapEntity(e)
   end
 
+  self.checkpointPos = { x = self.player.x, y = self.player.y }
+
   self.camera = { x = 0, y = 0 }
   self.followPlayer = true
 
@@ -88,6 +96,9 @@ function game:enter()
 
   self.visibleRowsAbove = 6
   self.visibleRowsBelow = 24
+
+  ---@type Timer[]
+  self.timers = {}
 
   if IS_DEBUG then
     self.editorEntityType = entityTypes[1]
@@ -127,6 +138,7 @@ function game:saveMap()
   if love.filesystem.isFused() then
     return
   end
+
   do
     local file, err = io.open(gamePath(tilesFilename), "w+b")
     if not file then
@@ -169,17 +181,21 @@ function game:saveMap()
 end
 
 function game:processMapEntity(e)
+  local worldX, worldY = e.x * self.segmentAngle, e.y * self.ringHeight
+
   if e.type == "playerStart" then
-    self.player.x = e.x * self.segmentAngle
-    self.player.y = e.y * self.ringHeight
+    self.player.x = worldX
+    self.player.y = worldY
     return
   end
 
   local new
   if e.type == "crawler" then
     new = Crawler:new():init(self)
-    new.x = e.x * self.segmentAngle
-    new.y = e.y * self.ringHeight
+    new.x = worldX
+    new.y = worldY
+  elseif e.type == "checkpoint" then
+    new = Checkpoint:new():init(self, worldX, worldY)
   else
     error("unknown entity type: " .. e.type)
   end
@@ -201,6 +217,22 @@ function game:isSolid(x, y)
   return self:mapGet(math.floor(x / self.segmentAngle), math.floor(y / self.ringHeight)) > 0
 end
 
+---@param time number
+---@param action function
+function game:after(time, action)
+  table.insert(self.timers, {
+    action = action,
+    time = time
+  })
+end
+
+function game:respawnPlayer()
+  self.player = Player:new():init(self)
+  self.player.x = self.checkpointPos.x
+  self.player.y = self.checkpointPos.y
+  self:addEntity(self.player)
+end
+
 ---@param dt number
 function game:update(dt)
   local toRemove = {}
@@ -209,7 +241,7 @@ function game:update(dt)
     e:update(dt)
     if e.onCollision then
       for _, e2 in ipairs(self.entities) do
-        if e ~= e2 and e2.solid and entitiesAABB(e, e2) then
+        if e ~= e2 and e2.collideable and entitiesAABB(e, e2) then
           e:onCollision(e2)
         end
       end
@@ -227,6 +259,15 @@ function game:update(dt)
   if self.followPlayer then
     self.camera.x = self.player:midX()
     self.camera.y = self.player:midY()
+  end
+
+  for i = #self.timers, 1, -1 do
+    local t = self.timers[i]
+    t.time = t.time - dt
+    if t.time <= 0 then
+      t.action()
+      table.remove(self.timers, i)
+    end
   end
 
   if self.debug then

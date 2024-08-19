@@ -15,7 +15,7 @@ local tiny = 0.0001
 ---@field touchingLeft boolean Whether the entity is currently touching a wall to its left.
 ---@field touchingRight boolean Whether the entity is currently touching a wall to its right.
 ---@field noclip boolean Whether gravity and collision are ignored.
----@field solid boolean? Whether this entity can collide with other entities.
+---@field collideable boolean? Whether this entity can collide with other entities.
 ---@field hurt boolean? Whether this entity should kill the player when they collide.
 ---@field onCollision? fun(self: Entity, other: Entity) A function that is called when this entity collides with another one.
 ---@field remove? boolean Whether this entity should be removed.
@@ -48,7 +48,7 @@ function Entity:update(dt)
 
   self.touchingLeft = false
   self.touchingRight = false
-  if self.solid and not self.noclip then
+  if self.collideable and not self.noclip then
     if self.dx > 0 then
       if self.game:isSolid(self.x + self.width, self.y + tiny) or self.game:isSolid(self.x + self.width, self.y + self.height - tiny) then
         local edgeX = math.floor((self.x + self.width) / self.game.segmentAngle) * self.game.segmentAngle
@@ -68,7 +68,7 @@ function Entity:update(dt)
   self.y = self.y + self.dy * dt
   self.onGround = false
 
-  if self.solid and not self.noclip then
+  if self.collideable and not self.noclip then
     if self.dy > 0 then
       if self.game:isSolid(self.x + tiny, self.y + self.height) or self.game:isSolid(self.x + self.width - tiny, self.y + self.height) then
         local edgeY = math.floor((self.y + self.height) / self.game.ringHeight) * self.game.ringHeight
