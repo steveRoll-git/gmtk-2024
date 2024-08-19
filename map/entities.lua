@@ -5,6 +5,16 @@ return {
     y = 9,
   },
   {
+    type = "crawler",
+    x = 25,
+    y = 18,
+  },
+  {
+    type = "crawler",
+    x = 30,
+    y = 18,
+  },
+  {
     type = "checkpoint",
     x = 10,
     y = 24,

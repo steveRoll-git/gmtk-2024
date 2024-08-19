@@ -28,9 +28,9 @@ end
 
 function Crawler:update(dt)
   Entity.update(self, dt)
-  if self.touchingLeft then
+  if self.touchingLeft or (self.dx < 0 and not self.game:isSolid(self.x, self.y + self.height + 0.1)) then
     self.dx = self.moveSpeed
-  elseif self.touchingRight then
+  elseif self.touchingRight or (self.dx > 0 and not self.game:isSolid(self.x + self.width, self.y + self.height + 0.1)) then
     self.dx = -self.moveSpeed
   end
 end
